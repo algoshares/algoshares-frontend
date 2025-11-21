@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\app",
+    "\\src\\app\\dashboard",
+    "\\src\\app\\dashboard\\trader",
+    "\\src\\app\\dashboard\\trader\\[id]",
+    "\\src\\components",
+    "\\src\\components\\dashboard"
+  ],
+  "SelectedNode": "\\src\\app\\dashboard\\trader\\[id]\\page.tsx",
+  "PreviewInSolutionExplorer": false
+}
