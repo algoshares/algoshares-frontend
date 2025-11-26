@@ -4,8 +4,13 @@ import { motion } from "framer-motion"
 import { useState } from "react"
 
 export default function SIPArea() {
+    type Plan = {
+        duration: string;
+        discount: string;
+    };
+
     const [showModal, setShowModal] = useState(false)
-    const [selectedPlan, setSelectedPlan] = useState<any>(null)
+    const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
     const plans = [
         { duration: "1 Month", discount: "5%" },

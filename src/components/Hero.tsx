@@ -16,7 +16,7 @@ export default function Hero() {
                 initial={{ scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 1.5 }}
-                className="absolute inset-0 bg-[url('/bg-hero.png')] bg-cover bg-center opacity-30"
+                className="absolute inset-0 bg-[url('/bg-hero.webp')] bg-cover bg-center opacity-30"
             />
 
             {/* Overlay */}

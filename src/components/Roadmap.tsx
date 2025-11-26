@@ -15,7 +15,7 @@ export default function Roadmap() {
                 initial={{ scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 1.5 }}
-                className="absolute inset-0 bg-cover bg-center bg-[url('/bg-roadmap.png')]"
+                className="absolute inset-0 bg-cover bg-center bg-[url('/bg-roadmap.webp')]"
             />
             <div className="absolute inset-0 bg-black/60" />
 
