@@ -3,7 +3,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'AlgoShares',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // get from https://cloud.walletconnect.com
+    projectId: 'fa8d6f382c249f37865ec6069266ab4f', // get from https://cloud.walletconnect.com
   chains: [base, baseSepolia],
   ssr: true, // enables server-side rendering
 });
