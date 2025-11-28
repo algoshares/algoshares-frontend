@@ -296,7 +296,7 @@ export default function ICOArea() {
         };
     }, [txHashPending]);
 
-    const CountdownBox = ({ label, value }) => (
+    const CountdownBox = ({ label, value }: { label: string; value: number }) => (
         <div className="bg-gray-800 px-3 py-2 rounded text-center">
             <div className="text-xl font-bold text-yellow-400">{value}</div>
             <div className="text-xs text-gray-400">{label}</div>
