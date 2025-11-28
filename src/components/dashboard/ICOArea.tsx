@@ -5,6 +5,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { icoAbi } from "@/abi/icoAbi";
 import { erc20Abi } from "@/abi/erc20Abi";
+import { ICORaisedSlider } from "@/components/dashboard/ICORaisedSlider";
 
 const ICO_ADDRESS = "0xc00fa6253f113d6121a6fee116e5a97cd3d49627";
 const USDT_ADDRESS = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
@@ -223,6 +224,13 @@ export default function ICOArea() {
         }
     }, [allowance, depositAmount, pd]);
 
+    const { data: totalRaised } = useReadContract({
+        address: ICO_ADDRESS,
+        abi: icoAbi,
+        functionName: "totalRaised",
+        chainId: 8453
+    });
+
     // optionally show tx pending / wait for completion (simple poll)
     useEffect(() => {
         if (!txHashPending) return;
@@ -272,7 +280,9 @@ export default function ICOArea() {
                         </div>
                     </div>
                 </div>
-            ) : null}
+            ) : (
+                <ICORaisedSlider totalRaised={totalRaised as bigint} paymentDecimals={pd} />
+            )}
 
             {/* Deposit area (only when connected) */}
             {isConnected && (
