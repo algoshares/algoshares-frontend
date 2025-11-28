@@ -4,22 +4,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { icoAbi } from "@/abi/icoAbi";
+import { erc20Abi } from "@/abi/erc20Abi";
 
 const ICO_ADDRESS = "0xc00fa6253f113d6121a6fee116e5a97cd3d49627";
 const USDT_ADDRESS = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
 
-/**
- * ERC20 ABI (minimal)
- */
-const erc20Abi = [
-    "function allowance(address owner, address spender) view returns (uint256)",
-    "function approve(address spender, uint256 amount) external returns (bool)",
-    "function decimals() view returns (uint8)",
-    "function balanceOf(address) view returns (uint256)"
-];
-
 export default function ICOArea() {
     const { address, isConnected } = useAccount();
+    const { writeContract } = useWriteContract();
+
 
     // read static config
     const { data: startTs } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "startTimestamp", chainId: 8453 });
@@ -43,24 +36,21 @@ export default function ICOArea() {
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "allocatedOfView",
-        args: [address || "0x0000000000000000000000000000000000000000"],
-        enabled: !!address,
+        args: [address],
         chainId: 8453
     });
     const { data: claimed } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "claimedOfView",
-        args: [address || "0x0000000000000000000000000000000000000000"],
-        enabled: !!address,
+        args: [address],
         chainId: 8453
     });
     const { data: claimable } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "claimableOfView",
-        args: [address || "0x0000000000000000000000000000000000000000"],
-        enabled: !!address,
+        args: [address],
         chainId: 8453
     });
 
@@ -77,9 +67,8 @@ export default function ICOArea() {
         address: USDT_ADDRESS,
         abi: erc20Abi,
         functionName: "allowance",
-        args: [address || "0x0000000000000000000000000000000000000000", ICO_ADDRESS],
-        enabled: !!address,
-        chainId: 8453
+        args: address ? [address, ICO_ADDRESS] : undefined, // undefined disables the call
+        chainId: 8453,
     });
 
     const { data: available } = useReadContract({
@@ -89,48 +78,72 @@ export default function ICOArea() {
         chainId: 8453
     });
 
-
     // local UI state
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [depositAmount, setDepositAmount] = useState(""); // human input (USDT whole/decimal e.g. "1000")
     const [txHashPending, setTxHashPending] = useState<string | null>(null);
 
-    // prepare contract write (approve)
-    const approvePrepare = useWriteContract({
-        mode: "recklesslyUnprepared",
-        address: USDT_ADDRESS,
-        abi: erc20Abi,
-        functionName: "approve",
-        chainId: 8453
-    });
+    async function handleApprove(event?: React.MouseEvent<HTMLButtonElement>) {
+        if (!depositAmount) return alert("Enter amount to approve");
+        const amt = parseUnits(depositAmount, pd);
 
-    const buyPrepare = useWriteContract({
-        mode: "recklesslyUnprepared",
-        address: ICO_ADDRESS,
-        abi: icoAbi,
-        functionName: "buy",
-        chainId: 8453
-    });
+        try {
+            const tx = await writeContract({
+                address: USDT_ADDRESS,
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [ICO_ADDRESS, amt],
+            });
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                alert(e.message);
+            } else {
+                alert("Approve failed");
+            }
+        }
+    }
 
-    const claimWrite = useWriteContract({
-        mode: "recklesslyUnprepared",
-        address: ICO_ADDRESS,
-        abi: icoAbi,
-        functionName: "claim",
-        chainId: 8453
-    });
+    async function handleDeposit(event?: React.MouseEvent<HTMLButtonElement>) {
+        if (!depositAmount) return alert("Enter amount to deposit");
+        const amt = parseUnits(depositAmount, pd);
+
+        try {
+            const tx = await writeContract({
+                address: ICO_ADDRESS,
+                abi: icoAbi,
+                functionName: "buy",
+                args: [amt],
+            });
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                alert(e.message);
+            } else {
+                alert("Deposit failed");
+            }
+        }
+    }
+
+    async function handleClaim() {
+        try {
+            const tx = await writeContract({
+                address: ICO_ADDRESS,
+                abi: icoAbi,
+                functionName: "claim",
+            });
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                alert(e.message);
+            } else {
+                alert("Claim failed");
+            }
+        }
+    }
 
     // small refresh loop for countdown / realtime updates
     useEffect(() => {
         const id = setInterval(() => setNowMs(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
-
-    useEffect(() => {
-        if (startTs !== undefined) {
-            console.log("startTimestamp =", startTs.toString());
-        }
-    }, [startTs]);
 
     // convenience values
     const startTimestampNumber = startTs ? Number(startTs.toString()) * 1000 : null;
@@ -163,21 +176,21 @@ export default function ICOArea() {
     }, [startTimestampNumber, nowMs]);
 
     // formatted numbers
-    const allocatedFormatted = allocated ? formatUnits(allocated, 6) : "0";
-    const claimedFormatted = claimed ? formatUnits(claimed, 6) : "0";
-    const claimableFormatted = claimable ? formatUnits(claimable, 6) : "0";
+    const allocatedFormatted = allocated ? formatUnits(allocated as bigint, 6) : "0";
+    const claimedFormatted = claimed ? formatUnits(claimed as bigint, 6) : "0";
+    const claimableFormatted = claimable ? formatUnits(claimable as bigint, 6) : "0";
 
     // utility: compute amounts per schedule entry for this user (vested amounts at each timestamp)
     const scheduleRows = useMemo(() => {
         // show for each release timestamp:
         // timestamp, bps, vested amount at that timestamp, claimable portion (vested - claimed up to that timestamp)
         if (!schedule.ts.length) return [];
-        const allocBN = allocated ?? 0n;
+        const allocBN: bigint = allocated != null ? (allocated as bigint) : BigInt(0);
         let cumulativeBps = 0;
         const rows = schedule.ts.map((t, i) => {
             cumulativeBps += schedule.bps[i] ?? 0;
             // vested amount at this timestamp:
-            const vested = (allocBN * BigInt(cumulativeBps)) / 10000n;
+            const vested = (allocBN * BigInt(cumulativeBps)) / BigInt(10000);
             return {
                 timestamp: t,
                 bps: schedule.bps[i] ?? 0,
@@ -202,75 +215,13 @@ export default function ICOArea() {
     const needsApproval = useMemo(() => {
         if (!allowance) return true;
         try {
-            const want = depositAmount ? parseUnits(depositAmount || "0", pd) : BigNumber.from(0);
-            return BigNumber.from(allowance).lt(want);
+            const want = depositAmount ? parseUnits(depositAmount, pd) : BigInt(0);
+            const allowanceBn: bigint = allowance as bigint; // cast from Wagmi return
+            return allowanceBn < want;
         } catch {
             return true;
         }
     }, [allowance, depositAmount, pd]);
-
-    const { write: approveWrite } = approvePrepare;
-    const { write: depositWrite } = buyPrepare;
-    const { write: claimWriteFn } = claimWrite;
-
-    async function handleApprove() {
-        if (!depositAmount) return alert("Enter amount to approve");
-        if (!approveWrite) return alert("Approve function not ready");
-        try {
-            const amt = parseUnits(depositAmount, pd);
-
-            if (!approveWrite) throw new Error("Write function not ready");
-
-            const tx = await approveWrite({
-                recklesslySetUnpreparedArgs: [ICO_ADDRESS, amt],
-            });
-            setTxHashPending(tx.hash);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                console.error(e);
-                alert(e.message);
-            } else {
-                console.error(e);
-                alert("Approve failed");
-            }
-        }
-    }
-
-    async function handleDeposit() {
-        if (!depositAmount) return alert("Enter deposit amount");
-        if (!depositWrite) return alert("Deposit function not ready");
-        try {
-            const amt = parseUnits(depositAmount, pd);
-            const tx = await depositWrite({
-                recklesslySetUnpreparedArgs: [amt],
-            });
-            setTxHashPending(tx.hash);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                console.error(e);
-                alert(e.message);
-            } else {
-                console.error(e);
-                alert("Deposit failed");
-            }
-        }
-    }
-
-    async function handleClaim() {
-        if (!claimWriteFn) return alert("Claim function not ready");
-        try {
-            const tx = await claimWriteFn();
-            setTxHashPending(tx.hash);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                console.error(e);
-                alert(e.message);
-            } else {
-                console.error(e);
-                alert("Claim failed");
-            }
-        }
-    }
 
     // optionally show tx pending / wait for completion (simple poll)
     useEffect(() => {
@@ -347,9 +298,9 @@ export default function ICOArea() {
                             )}
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
-                            Max per wallet: {maxContribution ? formatUnits(maxContribution, pd) : "-"} USDT
+                            Max per wallet: {maxContribution ? formatUnits(maxContribution as bigint, pd) : "-"} USDT
                         </p>
-                        <p className="text-xs text-gray-400">Available AGS in contract: {formatUnits(available ?? 0n, 6)}</p>
+                        <p className="text-xs text-gray-400">Available AGS in contract: {formatUnits(available as bigint ?? BigInt(0), 6)}</p>
                         <p className="text-xs text-gray-400">Price per AGS: 0.0045 USDT (launchprice 0.0050 USDT)</p>
                     </div>
                 </>
@@ -402,8 +353,8 @@ export default function ICOArea() {
             <div>
                 <button
                     onClick={handleClaim}
-                    disabled={!claimable || BigNumber.from(claimable ?? 0).eq(0)}
-                    className={`w-full py-2 rounded font-semibold transition ${claimable && BigNumber.from(claimable ?? 0).gt(0)
+                    disabled={!claimable || (claimable as bigint) <= BigInt(0)}
+                    className={`w-full py-2 rounded font-semibold transition ${claimable && (claimable as bigint) > BigInt(0)
                             ? "bg-green-600 text-black hover:bg-green-500"
                             : "bg-gray-700 text-gray-400 cursor-not-allowed"
                         }`}
