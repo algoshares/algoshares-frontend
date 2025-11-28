@@ -18,7 +18,7 @@ const erc20Abi = [
     "function balanceOf(address) view returns (uint256)"
 ];
 
-export default function ICOArea(): JSX.Element {
+export default function ICOArea() {
     const { address, isConnected } = useAccount();
 
     // read static config
