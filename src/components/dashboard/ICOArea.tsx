@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useSwitchChain } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { icoAbi } from "@/abi/icoAbi";
 import { erc20Abi } from "@/abi/erc20Abi";
@@ -13,7 +13,8 @@ const USDT_ADDRESS = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
 export default function ICOArea() {
     const { address, isConnected } = useAccount();
     const { writeContract } = useWriteContract();
-
+    const { writeContractAsync } = useWriteContract();
+    const { switchChain } = useSwitchChain();
 
     // read static config
     const { data: startTs } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "startTimestamp", chainId: 8453 });
@@ -84,7 +85,7 @@ export default function ICOArea() {
     const [depositAmount, setDepositAmount] = useState(""); // human input (USDT whole/decimal e.g. "1000")
     const [txHashPending, setTxHashPending] = useState<string | null>(null);
 
-    async function handleApprove(event?: React.MouseEvent<HTMLButtonElement>) {
+    /*async function handleApprove(event?: React.MouseEvent<HTMLButtonElement>) {
         if (!depositAmount) return alert("Enter amount to approve");
         const amt = parseUnits(depositAmount, pd);
 
@@ -94,7 +95,35 @@ export default function ICOArea() {
                 abi: erc20Abi,
                 functionName: "approve",
                 args: [ICO_ADDRESS, amt],
+                chainId: 8453
             });
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                alert(e.message);
+            } else {
+                alert("Approve failed");
+            }
+        }
+    }*/
+
+    async function handleApprove() {
+        if (!depositAmount) return alert("Enter amount to approve");
+
+        await switchChain({ chainId: 8453 });
+
+        const amt = parseUnits(depositAmount, pd);
+
+        try {
+            const txHash = await writeContractAsync({
+                address: USDT_ADDRESS,
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [ICO_ADDRESS, amt],
+                chainId: 8453,
+            });
+
+            console.log("Approve TX:", txHash);
+            setTxHashPending(txHash);
         } catch (e: unknown) {
             if (e instanceof Error) {
                 alert(e.message);
@@ -106,6 +135,9 @@ export default function ICOArea() {
 
     async function handleDeposit(event?: React.MouseEvent<HTMLButtonElement>) {
         if (!depositAmount) return alert("Enter amount to deposit");
+
+        await switchChain({ chainId: 8453 });
+
         const amt = parseUnits(depositAmount, pd);
 
         try {
@@ -114,6 +146,7 @@ export default function ICOArea() {
                 abi: icoAbi,
                 functionName: "buy",
                 args: [amt],
+                chainId: 8453
             });
         } catch (e: unknown) {
             if (e instanceof Error) {
@@ -125,11 +158,14 @@ export default function ICOArea() {
     }
 
     async function handleClaim() {
+        await switchChain({ chainId: 8453 });
+
         try {
             const tx = await writeContract({
                 address: ICO_ADDRESS,
                 abi: icoAbi,
                 functionName: "claim",
+                chainId: 8453
             });
         } catch (e: unknown) {
             if (e instanceof Error) {
@@ -175,6 +211,18 @@ export default function ICOArea() {
         const seconds = Math.floor((diff / 1000) % 60);
         return { days, hours, minutes, seconds, finished: false };
     }, [startTimestampNumber, nowMs]);
+
+    // countdown2
+    const timeLeftEnd = useMemo(() => {
+        if (!endTimestampNumber) return null;
+        const diff = endTimestampNumber - nowMs;
+        if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, finished: true };
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        return { days, hours, minutes, seconds, finished: false };
+    }, [endTimestampNumber, nowMs]);
 
     // formatted numbers
     const allocatedFormatted = allocated ? formatUnits(allocated as bigint, 6) : "0";
@@ -248,6 +296,13 @@ export default function ICOArea() {
         };
     }, [txHashPending]);
 
+    const CountdownBox = ({ label, value }) => (
+        <div className="bg-gray-800 px-3 py-2 rounded text-center">
+            <div className="text-xl font-bold text-yellow-400">{value}</div>
+            <div className="text-xs text-gray-400">{label}</div>
+        </div>
+    );
+
     return (
         <div className="p-6 bg-gray-900/60 rounded-xl border border-gray-700 shadow-lg">
             <div className="flex items-center justify-between mb-4">
@@ -259,29 +314,35 @@ export default function ICOArea() {
 
             {/* Countdown */}
             {timeLeft && !timeLeft.finished ? (
+                /* BEFORE START - countdown until start */
                 <div className="mb-4">
-                    <p className="text-sm text-gray-300 mb-2">Starts in</p>
-                    <div className="flex gap-3">
-                        <div className="bg-gray-800 px-3 py-2 rounded text-center">
-                            <div className="text-xl font-bold text-yellow-400">{timeLeft.days}</div>
-                            <div className="text-xs text-gray-400">days</div>
-                        </div>
-                        <div className="bg-gray-800 px-3 py-2 rounded text-center">
-                            <div className="text-xl font-bold text-yellow-400">{timeLeft.hours}</div>
-                            <div className="text-xs text-gray-400">hours</div>
-                        </div>
-                        <div className="bg-gray-800 px-3 py-2 rounded text-center">
-                            <div className="text-xl font-bold text-yellow-400">{timeLeft.minutes}</div>
-                            <div className="text-xs text-gray-400">minutes</div>
-                        </div>
-                        <div className="bg-gray-800 px-3 py-2 rounded text-center">
-                            <div className="text-xl font-bold text-yellow-400">{timeLeft.seconds}</div>
-                            <div className="text-xs text-gray-400">seconds</div>
-                        </div>
+                    <p className="text-sm text-gray-300 mb-2 text-center">Starts in</p>
+                    <div className="flex gap-3 justify-center">
+                        <CountdownBox label="days" value={timeLeft.days} />
+                        <CountdownBox label="hours" value={timeLeft.hours} />
+                        <CountdownBox label="minutes" value={timeLeft.minutes} />
+                        <CountdownBox label="seconds" value={timeLeft.seconds} />
                     </div>
                 </div>
             ) : (
-                <ICORaisedSlider totalRaised={totalRaised as bigint} paymentDecimals={pd} />
+                /* AFTER START - countdown until end (if not finished) */
+                <>
+                    {timeLeftEnd && !timeLeftEnd.finished ? (
+                        <div className="mb-4">
+                                <p className="text-sm text-gray-300 mb-2 text-center">Ends in</p>
+                                <div className="flex gap-3 justify-center">
+                                <CountdownBox label="days" value={timeLeftEnd.days} />
+                                <CountdownBox label="hours" value={timeLeftEnd.hours} />
+                                <CountdownBox label="minutes" value={timeLeftEnd.minutes} />
+                                <CountdownBox label="seconds" value={timeLeftEnd.seconds} />
+                            </div>
+                        </div>
+                    ) : (
+                        <p>&nbsp;</p>
+                    )}
+
+                    <ICORaisedSlider totalRaised={totalRaised as bigint} paymentDecimals={pd} />
+                </>
             )}
 
             {/* Deposit area (only when connected) */}
