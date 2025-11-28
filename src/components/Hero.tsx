@@ -44,6 +44,22 @@ export default function Hero() {
                     A new era of algorithmic wealth building.
                     Powered by traders. Fueled by community.
                 </p>
+
+                <p className="mt-4 text-lg md:text-xl text-gray-300">
+                    The ICO is <span className="text-green-400 font-bold">OPEN NOW!</span><br />
+                    Join today to get a <span className="text-yellow-400 font-bold">discounted price</span>.
+                </p>
+
+                {/* Animated CTA badge */}
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 1 }}
+                    className="mt-6 inline-block px-5 py-3 bg-green-600 rounded-full font-semibold shadow-lg text-black animate-pulse"
+                >
+                    Connect Wallet - Dashboard & Join ICO
+                </motion.div>
+
                 <div className="mt-8 flex justify-center gap-4">
                     {isConnected ? (
                         <Link

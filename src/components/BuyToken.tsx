@@ -15,7 +15,7 @@ export default function BuyToken() {
             >
                 <h2 className="text-4xl font-bold mb-6">How to buy the token</h2>
                 <p className="text-lg text-gray-300">
-                    Currently, we are awaiting the start of the ICO (will be expected 28th of November 2025).
+                    The ICO is now open! Connect your wallet and go to the dashboard to join the ICO for a discount!
                 </p>
             </motion.div>
         </section>
