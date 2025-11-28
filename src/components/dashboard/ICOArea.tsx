@@ -1,30 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useAccount, useContractRead, useContractWrite, usePrepareContractWrite, useWaitForTransaction } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
+import { icoAbi } from "@/abi/icoAbi";
 
 const ICO_ADDRESS = "0xc00fa6253f113d6121a6fee116e5a97cd3d49627";
 const USDT_ADDRESS = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
-
-/**
- * Minimal ICO ABI
- */
-const icoAbi = [
-    "function startTimestamp() view returns (uint256)",
-    "function endTimestamp() view returns (uint256)",
-    "function isOpen() view returns (bool)",
-    "function getReleaseSchedule() view returns (uint256[] memory, uint256[] memory)",
-    "function allocatedOfView(address) view returns (uint256)",
-    "function claimedOfView(address) view returns (uint256)",
-    "function claimableOfView(address) view returns (uint256)",
-    "function availableAGSinContract() view returns (uint256)",
-    "function buy(uint256 paymentAmount) external",
-    "function claim() external",
-    "function agsTokenDecimals() view returns (uint8)",
-    "function paymentTokenDecimals() view returns (uint8)",
-    "function maxContributionPerWallet() view returns (uint256)"
-];
 
 /**
  * ERC20 ABI (minimal)
@@ -40,16 +22,16 @@ export default function ICOArea(): JSX.Element {
     const { address, isConnected } = useAccount();
 
     // read static config
-    const { data: startTs } = useContractRead({ address: ICO_ADDRESS, abi: icoAbi, functionName: "startTimestamp", chainId: 8453 });
-    const { data: endTs } = useContractRead({ address: ICO_ADDRESS, abi: icoAbi, functionName: "endTimestamp", chainId: 8453 });
-    const { data: isOpenData } = useContractRead({ address: ICO_ADDRESS, abi: icoAbi, functionName: "isOpen", chainId: 8453 });
+    const { data: startTs } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "startTimestamp", chainId: 8453 });
+    const { data: endTs } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "endTimestamp", chainId: 8453 });
+    const { data: isOpenData } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "isOpen", chainId: 8453 });
 
     // decimals (read from contract)
-    const { data: agsDecimals } = useContractRead({ address: ICO_ADDRESS, abi: icoAbi, functionName: "agsTokenDecimals", chainId: 8453 });
-    const { data: paymentDecimals } = useContractRead({ address: ICO_ADDRESS, abi: icoAbi, functionName: "paymentTokenDecimals", chainId: 8453 });
+    const { data: agsDecimals } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "agsTokenDecimals", chainId: 8453 });
+    const { data: paymentDecimals } = useReadContract({ address: ICO_ADDRESS, abi: icoAbi, functionName: "paymentTokenDecimals", chainId: 8453 });
 
     // release schedule (two arrays)
-    const { data: scheduleRaw } = useContractRead({
+    const { data: scheduleRaw } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "getReleaseSchedule",
@@ -57,7 +39,7 @@ export default function ICOArea(): JSX.Element {
     });
 
     // user-specific reads (only when connected)
-    const { data: allocated } = useContractRead({
+    const { data: allocated } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "allocatedOfView",
@@ -65,7 +47,7 @@ export default function ICOArea(): JSX.Element {
         enabled: !!address,
         chainId: 8453
     });
-    const { data: claimed } = useContractRead({
+    const { data: claimed } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "claimedOfView",
@@ -73,7 +55,7 @@ export default function ICOArea(): JSX.Element {
         enabled: !!address,
         chainId: 8453
     });
-    const { data: claimable } = useContractRead({
+    const { data: claimable } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "claimableOfView",
@@ -83,7 +65,7 @@ export default function ICOArea(): JSX.Element {
     });
 
     // max contribution per wallet (in payment token smallest units)
-    const { data: maxContribution } = useContractRead({
+    const { data: maxContribution } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
         functionName: "maxContributionPerWallet",
@@ -91,7 +73,7 @@ export default function ICOArea(): JSX.Element {
     });
 
     // USDT allowance for ICO
-    const { data: allowance } = useContractRead({
+    const { data: allowance } = useReadContract({
         address: USDT_ADDRESS,
         abi: erc20Abi,
         functionName: "allowance",
@@ -100,10 +82,10 @@ export default function ICOArea(): JSX.Element {
         chainId: 8453
     });
 
-    const { data: available } = useContractRead({
+    const { data: available } = useReadContract({
         address: ICO_ADDRESS,
         abi: icoAbi,
-        functionName: "availableAGS",
+        functionName: "availableAGSinContract",
         chainId: 8453
     });
 
@@ -114,7 +96,7 @@ export default function ICOArea(): JSX.Element {
     const [txHashPending, setTxHashPending] = useState<string | null>(null);
 
     // prepare contract write (approve)
-    const approvePrepare = useContractWrite({
+    const approvePrepare = useWriteContract({
         mode: "recklesslyUnprepared",
         address: USDT_ADDRESS,
         abi: erc20Abi,
@@ -122,7 +104,7 @@ export default function ICOArea(): JSX.Element {
         chainId: 8453
     });
 
-    const buyPrepare = useContractWrite({
+    const buyPrepare = useWriteContract({
         mode: "recklesslyUnprepared",
         address: ICO_ADDRESS,
         abi: icoAbi,
@@ -130,7 +112,7 @@ export default function ICOArea(): JSX.Element {
         chainId: 8453
     });
 
-    const claimWrite = useContractWrite({
+    const claimWrite = useWriteContract({
         mode: "recklesslyUnprepared",
         address: ICO_ADDRESS,
         abi: icoAbi,
@@ -181,21 +163,21 @@ export default function ICOArea(): JSX.Element {
     }, [startTimestampNumber, nowMs]);
 
     // formatted numbers
-    const allocatedFormatted = allocated ? formatUnits(allocated as any, ad) : "0";
-    const claimedFormatted = claimed ? formatUnits(claimed as any, ad) : "0";
-    const claimableFormatted = claimable ? formatUnits(claimable as any, ad) : "0";
+    const allocatedFormatted = allocated ? formatUnits(allocated, 6) : "0";
+    const claimedFormatted = claimed ? formatUnits(claimed, 6) : "0";
+    const claimableFormatted = claimable ? formatUnits(claimable, 6) : "0";
 
     // utility: compute amounts per schedule entry for this user (vested amounts at each timestamp)
     const scheduleRows = useMemo(() => {
         // show for each release timestamp:
         // timestamp, bps, vested amount at that timestamp, claimable portion (vested - claimed up to that timestamp)
         if (!schedule.ts.length) return [];
-        const allocBN: BigNumber = allocated ?? BigNumber.from(0);
+        const allocBN = allocated ?? 0n;
         let cumulativeBps = 0;
         const rows = schedule.ts.map((t, i) => {
             cumulativeBps += schedule.bps[i] ?? 0;
             // vested amount at this timestamp:
-            const vested = allocBN.mul(cumulativeBps).div(10000);
+            const vested = (allocBN * BigInt(cumulativeBps)) / 10000n;
             return {
                 timestamp: t,
                 bps: schedule.bps[i] ?? 0,
@@ -227,42 +209,66 @@ export default function ICOArea(): JSX.Element {
         }
     }, [allowance, depositAmount, pd]);
 
+    const { write: approveWrite } = approvePrepare;
+    const { write: depositWrite } = buyPrepare;
+    const { write: claimWriteFn } = claimWrite;
+
     async function handleApprove() {
         if (!depositAmount) return alert("Enter amount to approve");
+        if (!approveWrite) return alert("Approve function not ready");
         try {
             const amt = parseUnits(depositAmount, pd);
-            const tx = await (approvePrepare.write?.({
-                recklesslySetUnpreparedArgs: [ICO_ADDRESS, amt]
-            }) as Promise<any>);
+
+            if (!approveWrite) throw new Error("Write function not ready");
+
+            const tx = await approveWrite({
+                recklesslySetUnpreparedArgs: [ICO_ADDRESS, amt],
+            });
             setTxHashPending(tx.hash);
-        } catch (e: any) {
-            console.error(e);
-            alert(e?.message || "Approve failed");
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                console.error(e);
+                alert(e.message);
+            } else {
+                console.error(e);
+                alert("Approve failed");
+            }
         }
     }
 
     async function handleDeposit() {
         if (!depositAmount) return alert("Enter deposit amount");
+        if (!depositWrite) return alert("Deposit function not ready");
         try {
             const amt = parseUnits(depositAmount, pd);
-            // call buy(paymentAmount)
-            const tx = await (buyPrepare.write?.({
-                recklesslySetUnpreparedArgs: [amt]
-            }) as Promise<any>);
+            const tx = await depositWrite({
+                recklesslySetUnpreparedArgs: [amt],
+            });
             setTxHashPending(tx.hash);
-        } catch (e: any) {
-            console.error(e);
-            alert(e?.message || "Deposit failed");
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                console.error(e);
+                alert(e.message);
+            } else {
+                console.error(e);
+                alert("Deposit failed");
+            }
         }
     }
 
     async function handleClaim() {
+        if (!claimWriteFn) return alert("Claim function not ready");
         try {
-            const tx = await (claimWrite.write?.() as Promise<any>);
+            const tx = await claimWriteFn();
             setTxHashPending(tx.hash);
-        } catch (e: any) {
-            console.error(e);
-            alert(e?.message || "Claim failed");
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                console.error(e);
+                alert(e.message);
+            } else {
+                console.error(e);
+                alert("Claim failed");
+            }
         }
     }
 
@@ -341,9 +347,10 @@ export default function ICOArea(): JSX.Element {
                             )}
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
-                            Max per wallet: {maxContribution ? formatUnits(maxContribution as any, pd) : "-"} USDT
+                            Max per wallet: {maxContribution ? formatUnits(maxContribution, pd) : "-"} USDT
                         </p>
-                        <p className="text-xs text-gray-400">Available AGS in contract: {formatUnits(available ?? 0n, 0)}</p>
+                        <p className="text-xs text-gray-400">Available AGS in contract: {formatUnits(available ?? 0n, 6)}</p>
+                        <p className="text-xs text-gray-400">Price per AGS: 0.0045 USDT (launchprice 0.0050 USDT)</p>
                     </div>
                 </>
             )}
@@ -370,7 +377,7 @@ export default function ICOArea(): JSX.Element {
                 <div className="bg-gray-800 rounded overflow-hidden text-xs">
                     <div className="grid grid-cols-3 gap-2 p-2 border-b border-gray-700 text-gray-400">
                         <div>Date</div>
-                        <div className="text-center">Release (bps)</div>
+                        <div className="text-center">Released %</div>
                         <div className="text-right">Vested (AGS)</div>
                     </div>
 
@@ -382,7 +389,7 @@ export default function ICOArea(): JSX.Element {
                             return (
                                 <div key={idx} className="grid grid-cols-3 gap-2 p-2 border-b border-gray-800 items-center">
                                     <div className="text-gray-200">{formatDate(r.timestamp)}</div>
-                                    <div className="text-center text-gray-300">{r.bps}</div>
+                                    <div className="text-center text-gray-300">{((r.bps ?? 0) / 100).toFixed(2)}%</div>
                                     <div className="text-right text-yellow-400">{vestedFormatted}</div>
                                 </div>
                             );

@@ -5,6 +5,7 @@ import { WalletConnect } from "@/components/wallet-connect"
 import SIPArea from "@/components/dashboard/SIPArea"
 import ICOArea from "@/components/dashboard/ICOArea"
 import TraderCard from "@/components/dashboard/TraderCard"
+import ChainTest from "@/components/dashboard/ChainTest"
 
 const traderData = [
     {
@@ -73,6 +74,10 @@ export default function DashboardPage() {
 
                 {/* Grid layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                    <div className="p-6">
+                        <ChainTest />
+                    </div>
 
                     {/* ICO Participation */}
                     <motion.div
