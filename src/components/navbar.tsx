@@ -6,6 +6,8 @@ import { useAccount, useDisconnect } from 'wagmi';
 import { LogOut, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { CustomConnectButton } from "@/components/CustomConnectButton";
 
 export function Navbar() {
     const { isConnected } = useAccount();
@@ -54,7 +56,7 @@ export function Navbar() {
                             Dashboard
                         </Link>
                     ) : (
-                        <WalletConnect />
+                            <CustomConnectButton />
                     )}
 
                     {isConnected && (

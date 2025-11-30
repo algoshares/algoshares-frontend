@@ -5,6 +5,8 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { useAccount } from "wagmi";
 import Link from "next/link";
 import Image from "next/image";
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { CustomConnectButton } from "@/components/CustomConnectButton";
 
 export default function Hero() {
     const { isConnected } = useAccount();
@@ -69,7 +71,7 @@ export default function Hero() {
                             Dashboard
                         </Link>
                     ) : (
-                        <WalletConnect />
+                            <CustomConnectButton />
                     )}
 
                     <a

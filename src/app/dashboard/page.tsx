@@ -6,6 +6,7 @@ import SIPArea from "@/components/dashboard/SIPArea"
 import ICOArea from "@/components/dashboard/ICOArea"
 import TraderCard from "@/components/dashboard/TraderCard"
 import ChainTest from "@/components/dashboard/ChainTest"
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const traderData = [
     {
@@ -69,7 +70,7 @@ export default function DashboardPage() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-12">
                     <h1 className="text-4xl font-bold">AlgoShares Dashboard</h1>
-                    <WalletConnect />
+                    <ConnectButton />
                 </div>
 
                 {/* Grid layout */}
