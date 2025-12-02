@@ -13,7 +13,7 @@ export interface TraderCardApiResponse {
 }
 
 export async function getTraderCardData(traderId: number): Promise<TraderCardApiResponse> {
-    const url = `http://54.80.219.224:3010/GetTraderCardData?trader_id=${traderId}`;
+    const url = `/api/trader/${traderId}`;
 
     const res = await fetch(url, {
         method: "GET",

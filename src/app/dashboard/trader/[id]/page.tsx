@@ -27,7 +27,8 @@ export default function TraderDetail({ params }: { params: Promise<{ id: string 
     useEffect(() => {
         async function loadData() {
             try {
-                const res = await fetch(`http://54.80.219.224:3010/GetTraderDetailedList?trader_id=${traderId}`);
+                // Fetch from internal Next.js API route
+                const res = await fetch(`/api/traderDetailedList?trader_id=${traderId}`);
                 const json = await res.json();
                 setTrades(json.trades);
             } catch (err) {
@@ -59,7 +60,7 @@ export default function TraderDetail({ params }: { params: Promise<{ id: string 
 
             {/* Header */}
             <h1 className="text-4xl font-extrabold mb-10 bg-gradient-to-r from-yellow-400 to-yellow-600 text-transparent bg-clip-text">
-                {name}
+                Trader details
             </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
