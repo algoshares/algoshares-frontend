@@ -1,53 +1,80 @@
 'use client'
 
-import { motion } from "framer-motion"
-import { WalletConnect } from "@/components/wallet-connect"
-import SIPArea from "@/components/dashboard/SIPArea"
-import ICOArea from "@/components/dashboard/ICOArea"
-import TraderCard from "@/components/dashboard/TraderCard"
-import ChainTest from "@/components/dashboard/ChainTest"
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import SIPArea from "@/components/dashboard/SIPArea";
+import ICOArea from "@/components/dashboard/ICOArea";
+import TraderCard from "@/components/dashboard/TraderCard";
+import { getTraderCardData } from "@/lib/getTraderCardData"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-const traderData = [
-    {
-        id: 1,
-        name: "Trader #1",
-        deposits: 12000,
-        withdrawals: 1750,
-        profit: 2500,
-        data: Array.from({ length: 30 }, (_, i) => ({
-            day: `Day ${i + 1}`,
-            balance: 10000 + i * 50 + Math.random() * 200,
-            equity: 10200 + i * 60 + Math.random() * 250,
-        })),
-    },
-    {
-        id: 2,
-        name: "Trader Bot A",
-        deposits: 8000,
-        withdrawals: 500,
-        profit: 700,
-        data: Array.from({ length: 30 }, (_, i) => ({
-            day: `Day ${i + 1}`,
-            balance: 7500 + i * 30 + Math.random() * 100,
-            equity: 7700 + i * 35 + Math.random() * 120,
-        })),
-    },
-    {
-        id: 3,
-        name: "Trader Bot B",
-        deposits: 7000,
-        withdrawals: 300,
-        profit: -450,
-        data: Array.from({ length: 30 }, (_, i) => ({
-            day: `Day ${i + 1}`,
-            balance: 6800 + i * 20 + Math.random() * 80,
-            equity: 6900 + i * 22 + Math.random() * 90,
-        })),
-    },
-]
+interface TraderCardData {
+    name: string;
+    deposits: number;
+    withdrawals: number;
+    profit: number;
+    dailyGraph: { day: string; balance: number; profitPercent: number }[];
+}
 
 export default function DashboardPage() {
+    const [realTrader, setRealTrader] = useState<TraderCardData | null>(null)
+
+    const traderData = [
+        realTrader
+            ? { id: 1, ...realTrader }
+            : { id: 1, name: "Loading...", deposits: 0, withdrawals: 0, profit: 0, dailyGraph: [] },
+        {
+            id: 2,
+            name: "Trader Bot A (DUMMY data)",
+            deposits: 8000,
+            withdrawals: 500,
+            profit: 700,
+            dailyGraph: Array.from({ length: 30 }, (_, i) => ({
+                day: `Day ${i + 1}`,
+                balance: 7500 + i * 30 + Math.random() * 100,
+                profitPercent: 7700 + i * 35 + Math.random() * 120,
+            })),
+        },
+        {
+            id: 3,
+            name: "Trader Bot B (DUMMY data)",
+            deposits: 7000,
+            withdrawals: 300,
+            profit: -450,
+            dailyGraph: Array.from({ length: 30 }, (_, i) => ({
+                day: `Day ${i + 1}`,
+                balance: 6800 + i * 20 + Math.random() * 80,
+                profitPercent: 6900 + i * 22 + Math.random() * 90,
+            })),
+        },
+    ]
+
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const dataFromApi = await getTraderCardData(1);
+
+                // Map backend dailyGraph to `data` for the TraderCard
+                const traderCardData: TraderCardData = {
+                    name: dataFromApi.name,
+                    deposits: dataFromApi.deposits,
+                    withdrawals: dataFromApi.withdrawals,
+                    profit: dataFromApi.profit,
+                    dailyGraph: dataFromApi.dailyGraph.map(d => ({
+                        day: d.date,
+                        balance: d.balance,
+                        profitPercent: d.profitPercent,
+                    })),
+                };
+
+                setRealTrader(traderCardData);
+            } catch (err) {
+                console.error("Error loading trader data", err)
+            }
+        }
+        loadData()
+    }, [])
+
     return (
         <main className="relative min-h-screen bg-gradient-to-b from-black via-gray-950 to-black text-white px-6 py-12 overflow-hidden">
             {/* Background */}
@@ -120,7 +147,7 @@ export default function DashboardPage() {
                         transition={{ duration: 1.2 }}
                         className="p-6 bg-gray-900/80 rounded-2xl shadow-lg col-span-1 md:col-span-2 lg:col-span-3"
                     >
-                        <h2 className="text-xl font-semibold mb-6">Trader Accounts <i>(currently dummy-data, until tradingaccounts go live)</i></h2>
+                        <h2 className="text-xl font-semibold mb-6">Trader Accounts <i>(First one live, rest is dummy until go-live)</i></h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {traderData.map((t, i) => (
                                 <TraderCard key={i} {...t} />
