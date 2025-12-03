@@ -225,9 +225,9 @@ export default function ICOArea() {
     }, [endTimestampNumber, nowMs]);
 
     // formatted numbers
-    const allocatedFormatted = allocated ? formatUnits(allocated as bigint, 6) : "0";
-    const claimedFormatted = claimed ? formatUnits(claimed as bigint, 6) : "0";
-    const claimableFormatted = claimable ? formatUnits(claimable as bigint, 6) : "0";
+    const allocatedFormatted = allocated ? Number(formatUnits(allocated as bigint, 6)).toFixed(2) : "0";
+    const claimedFormatted = claimed ? Number(formatUnits(claimed as bigint, 6)).toFixed(2) : "0";
+    const claimableFormatted = claimable ? Number(formatUnits(claimable as bigint, 6)).toFixed(2) : "0";
 
     // utility: compute amounts per schedule entry for this user (vested amounts at each timestamp)
     const scheduleRows = useMemo(() => {
@@ -371,7 +371,7 @@ export default function ICOArea() {
                         <p className="text-xs text-gray-400 mt-2">
                             Max per wallet: {maxContribution ? formatUnits(maxContribution as bigint, pd) : "-"} USDT
                         </p>
-                        <p className="text-xs text-gray-400">Available AGS in contract: {formatUnits(available as bigint ?? BigInt(0), 6)}</p>
+                        <p className="text-xs text-gray-400">Available AGS in contract: {Number(formatUnits(available as bigint ?? BigInt(0), 6)).toFixed(2)}</p>
                         <p className="text-xs text-gray-400">Price per AGS: 0.0045 USDT (launchprice 0.0050 USDT)</p>
                     </div>
                 </>
@@ -407,7 +407,7 @@ export default function ICOArea() {
                         <div className="p-3 text-gray-400">Schedule not set</div>
                     ) : (
                         scheduleRows.map((r, idx) => {
-                            const vestedFormatted = formatUnits(r.vested, ad);
+                            const vestedFormatted = Number(formatUnits(r.vested, ad)).toFixed(2);
                             return (
                                 <div key={idx} className="grid grid-cols-3 gap-2 p-2 border-b border-gray-800 items-center">
                                     <div className="text-gray-200">{formatDate(r.timestamp)}</div>
