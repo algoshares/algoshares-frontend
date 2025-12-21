@@ -312,9 +312,9 @@ export default function ICOArea() {
                 </div>
             </div>
 
-            {/* Countdown */}
+            {/*
+
             {timeLeft && !timeLeft.finished ? (
-                /* BEFORE START - countdown until start */
                 <div className="mb-4">
                     <p className="text-sm text-gray-300 mb-2 text-center">Starts in</p>
                     <div className="flex gap-3 justify-center">
@@ -325,7 +325,6 @@ export default function ICOArea() {
                     </div>
                 </div>
             ) : (
-                /* AFTER START - countdown until end (if not finished) */
                 <>
                     {timeLeftEnd && !timeLeftEnd.finished ? (
                         <div className="mb-4">
@@ -345,7 +344,6 @@ export default function ICOArea() {
                 </>
             )}
 
-            {/* Deposit area (only when connected) */}
             {isConnected && (
                 <>
                     <div className="mb-4">
@@ -376,6 +374,8 @@ export default function ICOArea() {
                     </div>
                 </>
             )}
+
+            */ }
 
             {/* User allocations */}
             <div className="mb-4 grid grid-cols-2 gap-3">

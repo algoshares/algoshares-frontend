@@ -4,9 +4,16 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import SIPArea from "@/components/dashboard/SIPArea";
 import ICOArea from "@/components/dashboard/ICOArea";
+import GOSClaim from "@/components/dashboard/GOSClaim";
 import TraderCard from "@/components/dashboard/TraderCard";
 import { getTraderCardData } from "@/lib/getTraderCardData"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { preseedAbi } from "@/abi/preseedAbi";
+import { useAccount, useReadContract, useWriteContract, useSwitchChain } from "wagmi";
+
+const PRESEED_ADDRESS = "0xCb628215df5F2b78cD84CF47cA589C352520f770";
+
+const TRADER_IDS = [1, 2];
 
 interface TraderCardData {
     name: string;
@@ -17,63 +24,49 @@ interface TraderCardData {
 }
 
 export default function DashboardPage() {
-    const [realTrader, setRealTrader] = useState<TraderCardData | null>(null)
+    const { address, isConnected } = useAccount();
+    const [traders, setTraders] = useState<(TraderCardData & { id: number })[]>([]);
 
-    const traderData = [
-        realTrader
-            ? { id: 1, ...realTrader }
-            : { id: 1, name: "Loading...", deposits: 0, withdrawals: 0, profit: 0, dailyGraph: [] },
-        {
-            id: 2,
-            name: "Trader Bot A (DUMMY data)",
-            deposits: 8000,
-            withdrawals: 500,
-            profit: 700,
-            dailyGraph: Array.from({ length: 30 }, (_, i) => ({
-                day: `Day ${i + 1}`,
-                balance: 7500 + i * 30 + Math.random() * 100,
-                profitPercent: 7700 + i * 35 + Math.random() * 120,
-            })),
-        },
-        {
-            id: 3,
-            name: "Trader Bot B (DUMMY data)",
-            deposits: 7000,
-            withdrawals: 300,
-            profit: -450,
-            dailyGraph: Array.from({ length: 30 }, (_, i) => ({
-                day: `Day ${i + 1}`,
-                balance: 6800 + i * 20 + Math.random() * 80,
-                profitPercent: 6900 + i * 22 + Math.random() * 90,
-            })),
-        },
-    ]
+    const { data: allocated } = useReadContract({
+        address: PRESEED_ADDRESS,
+        abi: preseedAbi,
+        functionName: "allocatedOfView",
+        args: address ? [address] : undefined,
+        query: { enabled: !!address },
+    });
+    const isPreseeder = typeof allocated === "bigint" && allocated > BigInt(0);
 
     useEffect(() => {
         async function loadData() {
             try {
-                const dataFromApi = await getTraderCardData(1);
+                const results = await Promise.all(
+                    TRADER_IDS.map(async (id) => {
+                        const dataFromApi = await getTraderCardData(id);
 
-                // Map backend dailyGraph to `data` for the TraderCard
-                const traderCardData: TraderCardData = {
-                    name: dataFromApi.name,
-                    deposits: dataFromApi.deposits,
-                    withdrawals: dataFromApi.withdrawals,
-                    profit: dataFromApi.profit,
-                    dailyGraph: dataFromApi.dailyGraph.map(d => ({
-                        day: d.date,
-                        balance: d.balance,
-                        profitPercent: d.profitPercent,
-                    })),
-                };
+                        return {
+                            id,
+                            name: dataFromApi.name,
+                            deposits: dataFromApi.deposits,
+                            withdrawals: dataFromApi.withdrawals,
+                            profit: dataFromApi.profit,
+                            dailyGraph: dataFromApi.dailyGraph.map(d => ({
+                                day: d.date,
+                                balance: d.balance,
+                                profitPercent: d.profitPercent,
+                            })),
+                        };
+                    })
+                );
 
-                setRealTrader(traderCardData);
+                setTraders(results);
             } catch (err) {
-                console.error("Error loading trader data", err)
+                console.error("Error loading trader data", err);
             }
         }
-        loadData()
-    }, [])
+
+        loadData();
+    }, []);
+
 
     return (
         <main className="relative min-h-screen bg-gradient-to-b from-black via-gray-950 to-black text-white px-6 py-12 overflow-hidden">
@@ -126,19 +119,22 @@ export default function DashboardPage() {
                         <SIPArea />
                     </motion.div>
 
-                    {/* GOS Claim */}
-                    {/*<motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1 }}
-                        className="p-6 bg-gray-900/80 rounded-2xl shadow-lg"
-                    >
-                        <h2 className="text-xl font-semibold mb-4">GOS Holder Claim</h2>
-                        <p className="text-gray-300 mb-4">Eligible old GOS holders can claim their AGS tokens here.</p>
-                        <button className="w-full py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-700 text-black font-bold hover:scale-105 transition">
-                            Claim Tokens
-                        </button>
-                    </motion.div>*/}
+                    {/* PreSeeder Claim */}
+                    {isConnected && isPreseeder && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1 }}
+                            className="p-6 bg-gray-900/80 rounded-2xl shadow-lg"
+                        >
+                            <h2 className="text-xl font-semibold mb-4">AGS Preseeder Claim</h2>
+                            <GOSClaim />
+                            {/*<p className="text-gray-300 mb-4">You are eligible to claim your vested AGS tokens.</p>
+                            <button className="w-full py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-700 text-black font-bold hover:scale-105 transition">
+                                Claim Tokens
+                            </button>*/}
+                        </motion.div>
+                    )}
 
                     {/* Trader Accounts */}
                     <motion.div
@@ -147,10 +143,10 @@ export default function DashboardPage() {
                         transition={{ duration: 1.2 }}
                         className="p-6 bg-gray-900/80 rounded-2xl shadow-lg col-span-1 md:col-span-2 lg:col-span-3"
                     >
-                        <h2 className="text-xl font-semibold mb-6">Trader Accounts <i>(First one live, rest is dummy until go-live)</i></h2>
+                        <h2 className="text-xl font-semibold mb-6">Trader Accounts</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {traderData.map((t, i) => (
-                                <TraderCard key={i} {...t} />
+                            {traders.map((t) => (
+                                <TraderCard key={t.id} {...t} />
                             ))}
                         </div>
                     </motion.div>
